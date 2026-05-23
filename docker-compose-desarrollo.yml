@@ -1,37 +1,48 @@
 # Use postgres/example user/password credentials
 
 services:
-  app:
+  backend:
     build:
       dockerfile: Dockerfile
-      context: .
-    image: parcial-2-app
-    restart: "no"
-    container_name: parcial-2-app
+      context: ./reservation-backend
+    image: backend
+    restart: always
+    container_name: backend
     ports:
-      - "8000:8000"
+      - "8080:8080"
+    volumes:
+    - ./reservation-backend:/app
     depends_on:
       - db
+
+  # frontend:
+  #   build:
+  #     dockerfile: Dockerfile
+  #     context: ./reservation-frontend
+  #   image: parcial-2-frontend
+  #   restart: "no"
+  #   container_name: parcial-2-frontend
+  #   ports:
+  #     - "3000:3000"
+
   db:
     image: postgres
     restart: always
-    # set shared memory limit when using docker compose
     shm_size: 128mb
-    # or set shared memory limit when deploy via swarm stack
-    #volumes:
-    #  - type: tmpfs
-    #    target: /dev/shm
-    #    tmpfs:
-    #      size: 134217728 # 128*2^20 bytes = 128Mb
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
+      POSTGRES_DB: reservation
+    volumes:
+      - postgres_data:/var/lib/postgresql
 
 
   adminer:
     image: adminer
     restart: always
     ports:
-      - "8080:8080"
+      - "8081:8080"
 
+volumes:
+  postgres_data:
 

@@ -1,0 +1,142 @@
+---
+description: Spring Boot reservation-backend — Java 25, layered architecture, records as DTOs
+alwaysApply: true
+---
+
+# Spring Boot — reservation-backend
+
+Apply these rules when developing `reservation-backend` and any future backend code in this repository.
+
+## Project layout (repository root)
+
+```
+parcial_2/
+├── Dockerfile                          # Dev image: JDK 21+, Node.js, WORKDIR /app
+├── docker-compose-desarrollo.yml       # app + postgres (db) + adminer
+├── README.md
+├── .gitignore
+└── reservation-backend/                # Maven / Spring Boot module
+    ├── pom.xml                         # Boot 4.0.6, Java 25, JPA, Web MVC, PostgreSQL, springdoc
+    ├── mvnw, mvnw.cmd
+    ├── HELP.md
+    └── src/
+        ├── main/
+        │   ├── java/co/ucp/software/jefersson/reservation_backend/
+        │   │   └── ReservationBackendApplication.java
+        │   └── resources/
+        │       └── application.properties
+        └── test/java/co/ucp/software/jefersson/reservation_backend/
+            └── ReservationBackendApplicationTests.java
+```
+
+**Base package:** `co.ucp.software.jefersson.reservation_backend`
+
+**Target package structure** (create packages as features grow; do not put everything in the root package):
+
+| Package | Responsibility |
+|---------|----------------|
+| `config` | `@Configuration`, OpenAPI, CORS, beans |
+| `controller` | REST `@RestController`, HTTP mapping only |
+| `service` | Business logic, `@Transactional` |
+| `repository` | Spring Data `JpaRepository` interfaces |
+| `entity` | JPA `@Entity` persistence model |
+| `dto` | **Java records** for API request/response |
+| `mapper` | Entity ↔ DTO conversion (classes or dedicated mapper types) |
+| `exception` | Custom exceptions + `@RestControllerAdvice` |
+
+**Stack (from `pom.xml`):** Java 25, Spring Boot 4.0.6, Spring Data JPA, Web MVC, PostgreSQL, springdoc-openapi 3.0.2.
+
+**Runtime (Docker Compose):** DB host `db`, user/password `admin` — use `jdbc:postgresql://db:5432/...` when the app runs inside the `app` container.
+
+---
+
+## Language and naming
+
+- **All** class, interface, enum, record, method, field, and parameter names **must be in English** (e.g. `ReservationService`, `findById`, `customerEmail`).
+- Package names stay lowercase with underscores only where already defined: `reservation_backend`.
+- REST paths: plural nouns, kebab-case if multi-word (`/api/v1/reservations`).
+- Constants: `UPPER_SNAKE_CASE`. Types: `PascalCase`. Members: `camelCase`.
+
+---
+
+## Java 25 practices
+
+- Prefer **constructor injection** (explicit constructor or single primary constructor); avoid field `@Autowired`.
+- Use **Java records** for all DTOs (request/response); keep entities as classes with JPA requirements.
+- Use `Optional<T>` as **return type** in services/repositories when absence is valid; do not use `Optional` as entity fields or JSON body fields.
+- Apply **immutability** where possible; records and `final` fields on services.
+- Use **pattern matching** and modern APIs when they improve clarity (e.g. `switch` expressions, `instanceof` patterns).
+- Use **text blocks** for multi-line SQL or messages when appropriate.
+- Do not expose JPA **entities** in controllers; map to/from **records** in the service or mapper layer.
+- Enable validation on API input: Jakarta Validation (`@NotNull`, `@Size`, etc.) on record components + `@Valid` on controller parameters.
+
+---
+
+## Spring Boot service practices
+
+- **Thin controllers:** validate input, delegate to service, return DTOs and appropriate `ResponseEntity` / HTTP status.
+- **Services** own transactions (`@Transactional` on service class or methods); repositories stay persistence-only.
+- **Repositories** extend `JpaRepository<Entity, Id>`; use derived query method names or `@Query` with clear names.
+- **Configuration** in `application.properties` / `application.yml`; secrets via environment variables in Docker, not hardcoded.
+- **Exceptions:** map domain errors to consistent HTTP responses via `@RestControllerAdvice`; avoid generic `catch (Exception e)` without rethrow or logging.
+- **Logging:** use SLF4J (`LoggerFactory.getLogger`); log errors with context, not stack traces to clients.
+- **OpenAPI:** document public REST endpoints (springdoc); keep summaries/descriptions in English.
+- **Tests:** slice or `@SpringBootTest` as needed; use Testcontainers or H2 only if aligned with project setup — prefer tests that match PostgreSQL when testing persistence.
+
+---
+
+## DTOs (records)
+
+- Place request/response types under `...reservation_backend.dto`.
+- Name by role: `CreateReservationRequest`, `ReservationResponse`, etc.
+- Compact constructors for validation when needed; use static factory methods only if they add clarity.
+- Records are **immutable**; do not add mutable setters.
+
+```java
+/** API representation of a reservation. */
+public record ReservationResponse(
+        Long id,
+        String customerEmail,
+        Instant reservedAt
+) {}
+```
+
+---
+
+## Javadoc (required)
+
+- Every **public** class, interface, enum, record, and **public** method must have up-to-date Javadoc.
+- Describe purpose, parameters (`@param`), return value (`@return`), and checked/important exceptions (`@throws`).
+- Keep Javadoc in English; update it whenever behavior or signatures change.
+- Private methods: Javadoc optional unless non-obvious.
+
+```java
+/**
+ * Returns a reservation by id.
+ *
+ * @param id the reservation identifier
+ * @return the reservation data
+ * @throws ReservationNotFoundException if no reservation exists for {@code id}
+ */
+public ReservationResponse findById(Long id) { ... }
+```
+
+---
+
+## What to avoid
+
+- Spanish identifiers in code (comments for business context may be Spanish if the team prefers; API and code names stay English).
+- God classes, business logic in controllers, or entities returned directly from REST endpoints.
+- Static mutable state, `System.out.println` for logging, swallowing exceptions.
+- Adding dependencies to `pom.xml` without a clear need; align new starters with existing stack (JPA, Web MVC, PostgreSQL).
+
+---
+
+## Checklist before finishing a feature
+
+- [ ] Code lives in the correct package layer
+- [ ] DTOs are records; entities are not exposed via API
+- [ ] Public API has Javadoc
+- [ ] Names in English
+- [ ] `application.properties` updated if new config is needed
+- [ ] Docker/DB settings use host `db` when running in Compose

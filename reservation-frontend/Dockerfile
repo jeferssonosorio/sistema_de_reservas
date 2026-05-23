@@ -1,7 +1,7 @@
 FROM debian:stable-slim
 
 LABEL authors="jeferssonosorio"
-LABEL description="Imagen de desarrollo con Node.js y OpenJDK"
+LABEL description="Imagen de desarrollo con NoseJS"
 
 # Paquetes básicos
 RUN apt-get update && \
@@ -14,10 +14,6 @@ RUN apt-get update && \
     bash \
     ca-certificates
 
-# Java
-RUN apt-get install -y openjdk-21-jdk
-ENV JAVA_HOME=/usr/lib/jvm/default-java
-ENV PATH="${JAVA_HOME}/bin:${PATH}"
 # Node.js 22
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
     apt-get install -y nodejs
