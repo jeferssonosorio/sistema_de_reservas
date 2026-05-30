@@ -19,5 +19,12 @@ RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
     apt-get install -y nodejs
 
 WORKDIR /app
+COPY package*.json ./
 
-CMD ["tail", "-f", "/dev/null"]
+RUN npm i
+
+COPY . .
+
+EXPOSE 4200
+
+CMD npm start

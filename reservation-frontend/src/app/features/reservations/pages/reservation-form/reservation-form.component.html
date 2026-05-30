@@ -1,0 +1,63 @@
+<section class="reservation-form">
+  <header class="reservation-form__header">
+    <h1>Nueva reserva</h1>
+    <a routerLink="/" class="reservation-form__back">Volver al listado</a>
+  </header>
+
+  <form
+    class="reservation-form__body"
+    [formGroup]="form"
+    (ngSubmit)="onSubmit()"
+    novalidate
+  >
+    <div class="form-field">
+      <label for="customerName">Nombre del cliente</label>
+      <input
+        id="customerName"
+        type="text"
+        formControlName="customerName"
+        autocomplete="name"
+        [class.form-field__input--invalid]="isInvalid('customerName')"
+      />
+      @if (isInvalid('customerName')) {
+        <span class="form-field__error">El nombre del cliente es obligatorio.</span>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="date">Fecha</label>
+      <input
+        id="date"
+        type="date"
+        formControlName="date"
+        [class.form-field__input--invalid]="isInvalid('date')"
+      />
+      @if (isInvalid('date')) {
+        <span class="form-field__error">La fecha es obligatoria.</span>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="time">Hora</label>
+      <input
+        id="time"
+        type="time"
+        formControlName="time"
+        [class.form-field__input--invalid]="isInvalid('time')"
+      />
+      @if (isInvalid('time')) {
+        <span class="form-field__error">La hora es obligatoria.</span>
+      }
+    </div>
+
+    <div class="reservation-form__actions">
+      <button type="submit" class="btn btn-primary" [disabled]="submitting()">
+        @if (submitting()) {
+          Guardando...
+        } @else {
+          Guardar reserva
+        }
+      </button>
+    </div>
+  </form>
+</section>

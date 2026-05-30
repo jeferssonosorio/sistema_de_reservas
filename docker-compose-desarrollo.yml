@@ -15,15 +15,18 @@ services:
     depends_on:
       - db
 
-  # frontend:
-  #   build:
-  #     dockerfile: Dockerfile
-  #     context: ./reservation-frontend
-  #   image: parcial-2-frontend
-  #   restart: "no"
-  #   container_name: parcial-2-frontend
-  #   ports:
-  #     - "3000:3000"
+  frontend:
+    build:
+      dockerfile: Dockerfile
+      context: ./reservation-frontend
+    image: frontend
+    restart: always
+    container_name: frontend
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./reservation-frontend:/app
+      - /app/node_modules
 
   db:
     image: postgres

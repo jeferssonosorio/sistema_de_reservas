@@ -1,0 +1,77 @@
+<section class="reservation-list">
+  <header class="reservation-list__header">
+    <h1>Reservations</h1>
+    <div class="reservation-list__actions">
+      <a routerLink="/reservations/new" class="btn btn-primary">New reservation</a>
+      <button type="button" class="btn btn-secondary" (click)="loadReservations()">
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <p class="reservation-list__message" role="status">Loading reservations...</p>
+  } @else if (errorMessage()) {
+    <p class="reservation-list__message reservation-list__message--error" role="alert">
+      {{ errorMessage() }}
+    </p>
+  } @else if (reservations().length === 0) {
+    <p class="reservation-list__message">No reservations found.</p>
+  } @else {
+    <div class="reservation-list__table-wrapper">
+      <table class="reservation-list__table">
+        <caption class="visually-hidden">
+          List of customer reservations
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">ID</th>
+            <th scope="col">Customer</th>
+            <th scope="col">Date</th>
+            <th scope="col">Time</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (reservation of reservations(); track reservation.id) {
+            <tr>
+              <td>{{ reservation.id }}</td>
+              <td>{{ reservation.customerName }}</td>
+              <td>{{ reservation.date }}</td>
+              <td>{{ reservation.time }}</td>
+              <td>
+                <span
+                  class="status-badge"
+                  [class.status-badge--cancelled]="
+                    reservation.status === reservationStatus.Cancelled
+                  "
+                >
+                  {{ reservation.status }}
+                </span>
+              </td>
+              <td>
+                @if (canCancel(reservation)) {
+                  <button
+                    type="button"
+                    class="btn btn-danger"
+                    [disabled]="isCancelling(reservation.id)"
+                    (click)="cancelReservation(reservation.id)"
+                  >
+                    @if (isCancelling(reservation.id)) {
+                      Cancelling...
+                    } @else {
+                      Cancel
+                    }
+                  </button>
+                } @else {
+                  <span class="reservation-list__no-action">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

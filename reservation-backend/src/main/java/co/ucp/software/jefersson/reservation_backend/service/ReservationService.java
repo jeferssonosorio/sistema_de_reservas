@@ -1,5 +1,7 @@
 package co.ucp.software.jefersson.reservation_backend.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
 import co.ucp.software.jefersson.reservation_backend.dto.CreateReservationRequest;
 import co.ucp.software.jefersson.reservation_backend.dto.ReservationResponse;
 import co.ucp.software.jefersson.reservation_backend.entity.ReservationEntity;
@@ -74,5 +76,9 @@ public class ReservationService {
         reservationMapper.updateStatus(entity, ReservationStatus.CANCELLED);
         ReservationEntity saved = reservationRepository.save(entity);
         return reservationMapper.toResponse(saved);
+    }
+
+    public List<ReservationResponse> getAllReservations(){
+        return reservationRepository.findAll().stream().map(reservationMapper::toResponse).toList();
     }
 }

@@ -1,0 +1,212 @@
+---
+description: Angular reservation-frontend — TypeScript strict, Clean Architecture, SOLID, OOP
+globs:
+  - reservation-frontend/**/*
+alwaysApply: false
+---
+
+# Angular — reservation-frontend
+
+Apply these rules when developing `reservation-frontend` and any future frontend code in this repository.
+
+## Project layout
+
+```
+parcial_2/
+├── docker-compose-desarrollo.yml       # frontend service on port 4200
+└── reservation-frontend/
+    ├── angular.json                    # Angular 21, prefix app
+    ├── package.json                    # Angular 21.2, RxJS 7.8, Vitest
+    ├── tsconfig.json                   # strict: true, strictTemplates
+    ├── Dockerfile                      # Node 24, ng serve :4200
+    └── src/
+        ├── main.ts
+        ├── index.html
+        ├── styles.css
+        └── app/
+            ├── app.ts                  # Root standalone component
+            ├── app.config.ts           # provideRouter, provideHttpClient
+            ├── app.routes.ts
+            ├── core/                   # App-wide singletons (create as needed)
+            ├── shared/                 # Reusable UI, pipes, directives (create as needed)
+            ├── domain/                 # Entities, ports, use-case contracts
+            ├── data/                   # HTTP clients, mappers, repository impl
+            ├── features/               # Feature slices (pages + presentation)
+            ├── model/                  # API DTOs (align with backend records)
+            └── service/                # Legacy; migrate to data/ or features/
+```
+## Language and naming
+- **All** class, interface, enum, record, method, field, and parameter names **must be in English** 
+
+**Stack:** Angular 21 (standalone APIs), TypeScript 5.9 (`strict: true`), RxJS 7.8, Vitest, Prettier.
+
+**Backend API (reservation-backend):** base path `/api/reservations` — mirror DTO names and shapes from backend (`CreateReservationRequest`, `ReservationResponse`).
+
+**Runtime:** local dev `http://localhost:8080`; in Docker Compose use the backend service hostname instead of `localhost` (configure via environment, not hardcoded in components).
+
+---
+
+## Clean Architecture (layers)
+
+Dependencies point **inward**: Presentation → Application → Domain ← Data/Infrastructure.
+
+| Layer | Folder | Responsibility |
+|-------|--------|----------------|
+| **Domain** | `domain/` | Business entities, enums, repository **ports** (interfaces), use-case contracts. No Angular or HTTP imports. |
+| **Application** | `features/*/application/` or feature services | Orchestrates use cases; depends on domain ports only. |
+| **Data** | `data/` | HTTP API clients, DTO mappers, repository **implementations** that satisfy domain ports. |
+| **Presentation** | `features/*/pages/`, `features/*/components/` | Components, templates, route config. Delegates to application layer; no direct `HttpClient` in templates. |
+| **Core** | `core/` | Interceptors, guards, global error handler, environment tokens. |
+| **Shared** | `shared/` | Dumb/reusable UI components, pipes, directives with no feature-specific business logic. |
+
+**Rules:**
+
+- Components **must not** call `HttpClient` directly; inject a repository, facade, or use-case service.
+- Map API DTOs (`model/`) to domain entities in the **data** layer when they diverge; keep presentation unaware of JSON shape details.
+- Feature folders are **vertical slices** (e.g. `features/reservations/`); avoid a flat `components/` dump of unrelated screens.
+
+---
+
+## SOLID in Angular
+
+| Principle | Application |
+|-----------|-------------|
+| **S — Single Responsibility** | One reason to change per class: a component renders UI; a service orchestrates one use case; a repository handles one aggregate's persistence. |
+| **O — Open/Closed** | Extend behavior via new implementations of ports (e.g. `ReservationRepository`) or strategy classes; avoid modifying stable components for every variant. |
+| **L — Liskov Substitution** | Implementations of interfaces/abstract classes must honor the contract (same inputs/outputs, no surprising side effects). |
+| **I — Interface Segregation** | Small, focused ports (`ReservationReader`, `ReservationWriter`) instead of one god interface with unused methods. |
+| **D — Dependency Inversion** | Depend on abstractions (`InjectionToken<ReservationRepository>` or abstract class); wire concrete HTTP implementations in `app.config.ts` or feature providers. |
+
+Prefer **`inject()`** and constructor injection; register implementations with `providers` / `provide*` functions, not `new` in components.
+
+---
+
+## OOP and TypeScript typing
+
+- **All** class, interface, enum, type alias, method, field, and parameter names **must be in English**.
+- Use **interfaces** for data shapes and contracts; use **classes** when behavior or DI lifecycle is required (services, mappers with logic).
+- Prefer **composition over inheritance**; use inheritance only for genuine shared abstract behavior.
+- **Encapsulation:** `private` / `protected` / `readonly`; expose the minimum surface from components (`protected` for template-only members).
+- **Immutability:** treat DTOs and view state as immutable where practical; use `readonly` fields and avoid mutating `@Input()` objects.
+- **No `any`.** Use `unknown` and narrow with type guards when the type is uncertain.
+- **No non-null assertion (`!`)** unless immediately preceded by a guard that TypeScript cannot infer.
+- Prefer **union types** and **discriminated unions** over loose string flags.
+- Use **`as const`** for literal enums when a TS `enum` is not needed.
+- Enable and preserve strict compiler options: `strict`, `noImplicitReturns`, `strictTemplates`, `strictInjectionParameters`.
+
+```typescript
+/** Port: reservation persistence (domain layer). */
+export interface ReservationRepository {
+  findAll(): Observable<Reservation[]>;
+  create(request: CreateReservationRequest): Observable<Reservation>;
+  cancel(id: number): Observable<Reservation>;
+}
+```
+
+---
+
+## Angular 21 practices
+
+- **Standalone components** only; no `NgModule` unless a third-party library requires it.
+- **Signals** for local component state; **`computed()`** for derived values; **`input()` / `output()`** for component API when using signal-based components.
+- **`ChangeDetectionStrategy.OnPush`** on all components unless there is a documented reason not to.
+- **Smart vs dumb:** container/page components load data and handle actions; presentational components receive `input()` and emit `output()` only.
+- **Routing:** lazy-load feature routes with `loadComponent` / `loadChildren`; keep `app.routes.ts` thin.
+- **Forms:** prefer **Reactive Forms** (`FormBuilder`, typed controls) for non-trivial validation; template-driven forms only for trivial cases.
+- **RxJS:** subscribe in services/facades; in components prefer `async` pipe or `toSignal()`. Always unsubscribe or use `takeUntilDestroyed()` when manual subscription is required.
+- **HttpClient:** always pass generic type parameters (`get<ReservationResponse[]>`); handle errors in interceptors or centralized error service.
+- **File naming:** `kebab-case` files; suffixes `*.component.ts`, `*.service.ts`, `*.model.ts`, `*.repository.ts`, `*.guard.ts`, `*.interceptor.ts`.
+- **Selector prefix:** `app` (from `angular.json`).
+
+---
+
+## Models and API alignment
+
+- Place request/response types under `model/` (or `domain/` for pure domain types).
+- Name by role: `CreateReservationRequest`, `ReservationResponse`, `ReservationStatus`.
+- Mirror backend DTO field names and types; use `string` for ISO dates if the API returns strings.
+- Do not leak HTTP or Angular types into domain entities.
+
+```typescript
+export interface CreateReservationRequest {
+  customerName: string;
+  date: string;
+  time: string;
+  service: string;
+}
+
+export enum ReservationStatus {
+  Active = 'ACTIVE',
+  Cancelled = 'CANCELLED',
+}
+
+export interface ReservationResponse {
+  id: number;
+  customerName: string;
+  date: string;
+  time: string;
+  service: string;
+  status: ReservationStatus;
+}
+```
+
+---
+
+## Services and data access
+
+- **Repository implementations** live in `data/` and implement domain ports.
+- **Facades** (optional) in `features/*/` coordinate multiple repositories for a screen.
+- Inject `HttpClient` only in data-layer services; base URL from `environment` or `InjectionToken`.
+- Map HTTP errors to domain-friendly results or typed error objects; never show raw stack traces in the UI.
+- Keep methods small and typed end-to-end: parameters and return types explicit (`Observable<T>`, `Promise<T>`, or `Signal<T>`).
+
+---
+
+## Components and templates
+
+- Keep templates declarative; no complex logic in HTML — use `computed()` or getters in the class.
+- Use `@if`, `@for`, `@switch` (built-in control flow); avoid legacy `*ngIf` / `*ngFor` in new code.
+- No business rules in templates or inline event handlers beyond calling a component method.
+- Styles: component-scoped in `styleUrl`; shared tokens in `styles.css` or shared partials.
+- Accessibility: semantic HTML, labels on form controls, keyboard-friendly actions.
+
+---
+
+## Testing (Vitest)
+
+- Unit-test services, mappers, and pure domain logic with mocked dependencies.
+- Test components with shallow rendering; assert inputs/outputs and DOM for critical flows.
+- Mock `HttpClient` with `HttpTestingController` or repository fakes; do not hit the real backend in unit tests.
+- Name tests after behavior: `should cancel reservation and emit updated list`.
+
+---
+
+## Documentation
+
+- Public services, repositories, and non-obvious component APIs: **JSDoc** in English (`@param`, `@returns`, `@throws` where relevant).
+- Update JSDoc when signatures or behavior change.
+
+---
+
+## What to avoid
+
+- Spanish identifiers in code (comments for business context may be Spanish; code names stay English).
+- God components that fetch, map, validate, and render everything.
+- Business logic duplicated across components instead of centralized in application/domain layer.
+- Subscribing in components without cleanup; nested subscriptions without `switchMap` / `mergeMap` where appropriate.
+- Hardcoded API URLs in components; use environment or injection tokens.
+- `console.log` for production diagnostics; use a proper logging abstraction if needed.
+- Adding npm dependencies without a clear need; stay aligned with Angular 21 and existing stack.
+
+---
+
+## Checklist before finishing a feature
+
+- [ ] Code lives in the correct architectural layer (domain / data / presentation)
+- [ ] No `any`; strict TypeScript satisfied
+- [ ] Components do not call `HttpClient` directly
+- [ ] DTOs aligned with backend API; mappers used if domain differs from API
+- [ ] SOLID: single responsibility, dependencies on abstractions
+- [ ] Standalone + OnPush; signals or async pipe for state
+- [ ] Names and JSDoc in English
+- [ ] API base URL configurable for Docker vs local dev
